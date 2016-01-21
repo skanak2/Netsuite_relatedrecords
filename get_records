@@ -1,0 +1,175 @@
+
+
+
+
+
+<?php 
+
+require 'PHPToolkit/NSconfig.php';
+
+ require 'PHPToolkit/NetSuiteService.php';
+ 
+require_once 'PHPToolkit/NSPHPClient.php';
+
+
+echo "Connecting to server ..........\n";
+$savedsrchid="internal id";//saved search internal id $ct=0;
+$pageindex=0;
+$service= new NetSuiteService();
+$d=0;
+$search = new TransactionSearchAdvanced();
+$search->savedSearchId =$savedsrchid; //Saved Search internal ID, where the internal id's of all sales order records are saved
+$cnt=0;
+
+
+$request = new SearchRequest();
+$request->searchRecord = $search;
+
+$searchResponse = $service->search($request);
+
+
+
+
+
+
+
+//check if the records are present?
+if (!$searchResponse->searchResult->status->isSuccess) {
+            echo "SEARCH ERROR";
+        } else {
+         echo "SEARCH SUCCESS, records found: " . $searchResponse->searchResult->totalRecords . "\n";
+         $totalRecords=$searchResponse->searchResult->totalRecords;
+         $noofpages=$searchResponse->searchResult->totalPages;//counting total number of page in saved search
+         $noofpages=round($noofpages);
+         echo "total pages------------". $noofpages;
+         //going to next page index
+         for($p=0;$p<$noofpages;$p++)
+         {
+         	
+         	
+         	
+         	
+         	
+         	
+         	if($ct!=0)//after first 1000 records
+         	{
+         		
+         		
+         		$searchId = $searchResponse->searchResult->searchId;// getting search id
+         		$pageSize=$searchResponse->searchResult->pageSize;//size of a page 	
+         		$currentPage=$searchResponse->searchResult->pageIndex;//current page you are on
+         		
+         		$request = new SearchMoreWithIdRequest();//request for more records
+         		$request->searchId = $searchId;
+         		$request->pageIndex = $currentPage+1;//moving to next page
+         		$moreSearchResponse = $service->searchMoreWithId($request);
+         		$searchResponse=$moreSearchResponse;
+         	
+         	
+         		if (!$searchResponse->searchResult->status->isSuccess) {
+         			echo "SEARCH ERROR";
+         		} else {
+         			echo "SEARCH SUCCESS, records found: " . $searchResponse->searchResult->totalRecords . "\n";
+         			$totalrecords=$searchResponse->searchResult->totalRecords;
+         			
+         		}
+         	}//end of moresearch
+         	
+         	
+         	
+         	$ct=$ct+1;//if first page is fetched
+         
+    $records = $searchResponse->searchResult->searchRowList->searchRow;
+    foreach ($records as $record)  {
+        echo "Name: ";
+        
+       
+      
+        
+        
+        
+        
+        $brocs=$record->basic->internalId;
+        $droncs=$record->basic->type;
+        $dtype=$droncs[0]->searchValue;
+        $dtype=substr ($dtype,1);
+        echo $dtype;
+        	echo "the internal id is............... \n";
+        	//var_dump($record->basic);
+        	
+        	$intid=$brocs[0]->searchValue->internalId;//fetches Internal ID from record
+        
+        	$s = print_r($intid, 1);
+        	echo ($s);
+        	if($cnt%2==0)
+        	{
+        		//emptying the cache( not mandatory)
+        		ini_set('soap.wsdl_cache_enabled',0);
+        		ini_set('soap.wsdl_cache_ttl',0);
+        		ini_set("default_socket_timeout", 200);
+        	}
+        	   	
+    
+        	get_allitemfulfillfields($s,$service,$dtype);//calling function to get all details like id and type of record
+        	//passing internal id, type and service as parameters
+           		$cnt++;
+        	
+        	
+        	
+        	// for connection change keep_alive=true in NSPHPclient.php else the connection can break anytime in between
+    }	
+    }}
+    
+    
+    
+    
+
+function get_allitemfulfillfields($intid,$service,$dtype)
+{
+	
+	$request = new GetRequest();
+	// A recordRef object that specifies the id of the record to be retrieved.
+	$request->baseRef = new RecordRef();// get request, get all types request related to what you need actually
+	$request->baseRef->internalId =$intid;//internal id of record to be fetched
+	$request->baseRef->type =$dtype;//Type of the record which is need to be fetched
+	
+	
+	
+	
+	
+	$getResponse = $service->get($request);//gets the object
+	if ( ! $getResponse->readResponse->status->isSuccess) {
+		echo "GET ERROR";
+	} else {
+	
+		$customer = $getResponse->readResponse->record;//fetches all the objects which is present inside a record
+		//var_dump($customer);//fetches all the objects in a record
+		
+		
+		
+		//for example the way you can fetch record
+		$description=$customer->itemList->item[1]->description;
+		$family=substr($description, 0, strpos($description, ' '));
+		$price_level=$customer->itemList->item[2]->price->name;
+		$type=$dtype;
+		$number=$customer->tranId;
+	}
+	
+	
+}
+
+    
+    
+    
+    
+   
+    
+    
+    
+    
+
+
+?>
+
+
+
